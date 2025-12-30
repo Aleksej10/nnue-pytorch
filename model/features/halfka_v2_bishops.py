@@ -1,5 +1,8 @@
 import chess
 
+from .feature_block import FeatureBlock
+from collections import OrderedDict
+
 import typing
 from typing import Dict, List
 if typing.TYPE_CHECKING:

@@ -68,3 +68,15 @@ This script runs in a loop, and will monitor the directory for new checkpoints. 
 * https://github.com/DanielUranga/TensorFlowNNUE
 * https://hxim.github.io/Stockfish-Evaluation-Guide/
 * dkappe - Suggesting ranger (https://github.com/lessw2020/Ranger-Deep-Learning-Optimizer)
+
+
+installing requirements on macos, numba requires llvm@20
+
+brew install llvm@20
+
+export LLVM_CONFIG=$(brew --prefix llvm@20)/bin/llvm-config
+export LLVM_DIR=$(brew --prefix llvm@20)/lib/cmake/llvm
+export LDFLAGS="-L$(brew --prefix llvm@20)/lib"
+export CPPFLAGS="-I$(brew --prefix llvm@20)/include"
+
+uv pip install --no-cache-dir -r requirements.txt

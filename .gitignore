@@ -2,6 +2,7 @@ __pycache__/
 env/
 build/
 logs/
+data/
 testing
 libtraining_data_loader.*
 easy_train_data

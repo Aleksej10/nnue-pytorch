@@ -11,13 +11,14 @@ added to the _feature_modules list. Each such module must define a
 function `get_feature_block_clss` at module scope that returns the list
 of feature block classes in that module.
 """
-from . import halfkp, halfka, halfka_v2, halfka_v2_hm, full_threats
+from . import halfkp, halfka, halfka_v2, halfka_v2_hm, halfka_v2_bishops, full_threats
 
 _feature_modules: list[types.ModuleType] = [
     halfkp,
     halfka,
     halfka_v2,
     halfka_v2_hm,
+    halfka_v2_bishops,
     full_threats,
 ]
 
