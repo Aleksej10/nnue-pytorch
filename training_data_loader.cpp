@@ -376,6 +376,152 @@ struct HalfKAv2_hmFactorized {
     }
 };
 
+
+static constexpr std::int8_t PIECE_NB = 16;
+static constexpr std::int8_t SQUARE_NB = 64;
+static constexpr std::int8_t COLOR_NB = 2;
+
+enum PieceSquare : int {
+  PS_NONE       =  0,
+  PS_W_PAWN     =  0,
+  PS_B_PAWN     =  1 * SQUARE_NB,
+  PS_W_KNIGHT   =  2 * SQUARE_NB,
+  PS_B_KNIGHT   =  3 * SQUARE_NB,
+  PS_W_L_BISHOP =  4 * SQUARE_NB,
+  PS_W_D_BISHOP =  5 * SQUARE_NB,
+  PS_B_L_BISHOP =  6 * SQUARE_NB,
+  PS_B_D_BISHOP =  7 * SQUARE_NB,
+  PS_W_ROOK     =  8 * SQUARE_NB,
+  PS_B_ROOK     =  9 * SQUARE_NB,
+  PS_W_QUEEN    = 10 * SQUARE_NB,
+  PS_B_QUEEN    = 11 * SQUARE_NB,
+  PS_KING       = 12 * SQUARE_NB,
+  PS_NB         = 13 * SQUARE_NB,
+  PS_VIRTUAL_NB = 14 * SQUARE_NB,
+};
+                                           //   pov       p_color  p_type
+static constexpr std::uint32_t PieceSquareIndex[COLOR_NB][COLOR_NB][PIECE_NB] = {
+  {
+    { PS_NONE, PS_W_PAWN, PS_W_KNIGHT, PS_W_L_BISHOP, PS_W_ROOK, PS_W_QUEEN, PS_KING, PS_NONE },
+    { PS_NONE, PS_B_PAWN, PS_B_KNIGHT, PS_B_L_BISHOP, PS_B_ROOK, PS_B_QUEEN, PS_KING, PS_NONE },
+  },
+  {
+    { PS_NONE, PS_B_PAWN, PS_B_KNIGHT, PS_B_L_BISHOP, PS_B_ROOK, PS_B_QUEEN, PS_KING, PS_NONE },
+    { PS_NONE, PS_W_PAWN, PS_W_KNIGHT, PS_W_L_BISHOP, PS_W_ROOK, PS_W_QUEEN, PS_KING, PS_NONE },
+  }
+};
+
+#define B(v) (v * PS_NB)
+// clang-format off
+static constexpr std::uint32_t KingBuckets[SQUARE_NB] = {
+  B(28), B(29), B(30), B(31), B(31), B(30), B(29), B(28),
+  B(24), B(25), B(26), B(27), B(27), B(26), B(25), B(24),
+  B(20), B(21), B(22), B(23), B(23), B(22), B(21), B(20),
+  B(16), B(17), B(18), B(19), B(19), B(18), B(17), B(16),
+  B(12), B(13), B(14), B(15), B(15), B(14), B(13), B(12),
+  B( 8), B( 9), B(10), B(11), B(11), B(10), B( 9), B( 8),
+  B( 4), B( 5), B( 6), B( 7), B( 7), B( 6), B( 5), B( 4),
+  B( 0), B( 1), B( 2), B( 3), B( 3), B( 2), B( 1), B( 0),
+};
+// clang-format on
+#undef B
+
+static constexpr int OrientTBL[SQUARE_NB] = {
+  7, 7, 7, 7, 0, 0, 0, 0,
+  7, 7, 7, 7, 0, 0, 0, 0,
+  7, 7, 7, 7, 0, 0, 0, 0,
+  7, 7, 7, 7, 0, 0, 0, 0,
+  7, 7, 7, 7, 0, 0, 0, 0,
+  7, 7, 7, 7, 0, 0, 0, 0,
+  7, 7, 7, 7, 0, 0, 0, 0,
+  7, 7, 7, 7, 0, 0, 0, 0,
+};
+
+struct HalfKAv2_hm_bishops {
+  static constexpr std::string_view NAME = "HalfKAv2_hm_bishops";
+
+  static constexpr int NUM_SQ     = 64;
+  static constexpr int NUM_PT     = 13;
+  static constexpr int NUM_PLANES = NUM_SQ * NUM_PT;
+  static constexpr int INPUTS     = NUM_PLANES * NUM_SQ / 2;
+
+  static constexpr int MAX_ACTIVE_FEATURES = 32;
+
+  static int 
+  feature_index(Color color, Square ksq, Square s, Piece p) {
+    const std::int8_t perspective = static_cast<std::int8_t>(color);
+    const std::int8_t piece_type  = static_cast<std::int8_t>(p.type());
+    const std::int8_t piece_color = static_cast<std::int8_t>(p.color());
+    const int king_sq = static_cast<int>(ksq);
+
+    static constexpr std::int8_t BISHOP = static_cast<std::int8_t>(PieceType::Bishop);
+
+    const std::uint32_t flip = 56 * perspective;
+
+    const std::uint32_t oriented_s = static_cast<int>(s) ^ OrientTBL[king_sq] ^ flip;
+
+    std::uint32_t offset = PieceSquareIndex[perspective][piece_color][piece_type];
+
+    offset += ((piece_type == BISHOP) & piece_color) << 6;
+
+    return oriented_s + offset + KingBuckets[king_sq ^ flip];
+  }
+
+  static std::pair<int, int>
+  fill_features_sparse(const TrainingDataEntry& e, int* features, float* values, Color color) {
+    auto& pos    = e.pos;
+    auto  pieces = pos.piecesBB();
+    auto  ksq    = pos.kingSquare(color);
+
+    int j = 0;
+    for (Square sq : pieces)
+    {
+      auto p      = pos.pieceAt(sq);
+      values[j]   = 1.0f;
+      features[j] = feature_index(color, ksq, sq, p);
+      ++j;
+    }
+
+    return {j, INPUTS};
+  }
+};
+
+struct HalfKAv2_hm_bishopsFactorized {
+  static constexpr std::string_view NAME = "HalfKAv2_hm_bishops^";
+
+  // Factorized features
+  static constexpr int NUM_PT       = 14;
+  static constexpr int PIECE_INPUTS = HalfKAv2_hm_bishops::NUM_SQ * NUM_PT;
+  static constexpr int INPUTS       = HalfKAv2_hm_bishops::INPUTS + PIECE_INPUTS;
+
+  static constexpr int MAX_PIECE_FEATURES = 32;
+  static constexpr int MAX_ACTIVE_FEATURES =
+  HalfKAv2_hm_bishops::MAX_ACTIVE_FEATURES + MAX_PIECE_FEATURES;
+
+  static std::pair<int, int>
+  fill_features_sparse(const TrainingDataEntry& e, int* features, float* values, Color color) {
+    const auto [start_j, offset] =
+      HalfKAv2_hm_bishops::fill_features_sparse(e, features, values, color);
+    auto& pos    = e.pos;
+    auto  pieces = pos.piecesBB();
+    auto  ksq    = pos.kingSquare(color);
+
+    int j = start_j;
+    for (Square sq : pieces)
+    {
+      auto p      = pos.pieceAt(sq);
+      auto p_idx  = static_cast<int>(p.type()) * 2 + (p.color() != color);
+      values[j]   = 1.0f;
+      features[j] = offset + (p_idx * HalfKAv2_hm_bishops::NUM_SQ)
+        + static_cast<int>(orient_flip_2(color, sq, ksq));
+      ++j;
+    }
+
+    return {j, INPUTS};
+  }
+};
+
+
 constexpr int numvalidtargets[12] = {6, 6, 12, 12, 10, 10, 10, 10, 12, 12, 8, 8};
 
 constexpr auto threatoffsets = []() {
@@ -667,6 +813,8 @@ auto get_feature(std::string_view name) {
                         HalfKAv2Factorized,     //
                         HalfKAv2_hm,            //
                         HalfKAv2_hmFactorized,  //
+                        HalfKAv2_hm_bishops,            //
+                        HalfKAv2_hm_bishopsFactorized,  //
                         Full_Threats,           //
                         Full_ThreatsFactorized  //
                         >(name);
