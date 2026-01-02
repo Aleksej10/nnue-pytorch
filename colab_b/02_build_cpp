@@ -1,0 +1,4 @@
+!cd nnue-pytorch
+!chmod +x setup_script.sh
+!chmod +x compile_data_loader.bat
+!./setup_script.sh
