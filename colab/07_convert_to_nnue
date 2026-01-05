@@ -1,0 +1,3 @@
+!cd nnue-pytorch && python serialize.py --features=HalfKAv2_hm_bishops checkpoints/last.ckpt nets/nn.nnue
+
+!cd nnue-pytorch && python serialize.py --out-sha --features=HalfKAv2_hm_bishops checkpoints/last.ckpt nets

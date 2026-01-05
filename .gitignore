@@ -10,3 +10,6 @@ easy_train_data
 
 checkpoints/*
 !checkpoints/keep
+
+nets/*
+!nets/keep
