@@ -5,7 +5,8 @@ from dataclasses import dataclass
 @dataclass
 class ModelConfig:
     # L1: int = 3072
-    L1: int = 128 # small net
+    # L1: int = 128 # small net
+    L1: int = 1024 # master branch
     L2: int = 15
     L3: int = 32
 

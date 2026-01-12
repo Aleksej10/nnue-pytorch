@@ -4,8 +4,6 @@ from features import FeatureSet
 import model as M
 import torch
 
-VERSION = 0x7AF32F20
-
 def header(model: M.NNUEModel):
   fc_hash = hash(model)
 
